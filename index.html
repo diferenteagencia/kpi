@@ -56,6 +56,12 @@
       </div>
       <label>PDV<select id="pdv"></select></label>
       <div class="info" id="channelInfo">Canal: selecione um PDV</div>
+      <div class="card nested" id="unlistedPdvCard" hidden>
+        <h3>PDV não encontrado na listagem</h3>
+        <label>Rede<select id="unlistedNetwork"></select></label>
+        <label id="unlistedNetworkNameWrap" hidden>Nome da nova rede<input id="unlistedNetworkName" type="text" placeholder="Digite o nome da rede"></label>
+        <label id="unlistedChannelWrap" hidden>Canal<select id="unlistedChannel"><option value="">Selecione</option><option>FAMILY FOOTWEAR</option><option>PERFORMANCE SPECIALTY</option><option>SPORT INSPIRED</option><option>SPORTING GOODS</option></select></label>
+      </div>
     </section>
 
     <section class="card" id="brandsCard" hidden>
@@ -126,6 +132,8 @@
     const $ = (id) => document.getElementById(id);
     const FLOW_URL = 'https://defaultced99b0d76fe421fb12a1c3eae8ba1.2c.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/21/workflows/5237f466eca8400da9a18293137fda8a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=997F7ej6vrJ44uC60pyB9EEFAIaMLtfWeTB5VVd0L6k';
     const activePdvs = PDV_DATA.filter((row) => row.active || !row.status);
+    const NOT_FOUND_PDV = '__PDV_NOT_FOUND__';
+    const NOT_FOUND_NETWORK = '__NETWORK_NOT_FOUND__';
     const state = { pdv: null, brands: [], family: {}, brandAnswers: {} };
     
     function escapeHtml(value) {
@@ -160,22 +168,67 @@
       $('neighborhood').value = neighborhoodValue;
       const finalRows = activePdvs.filter((row) => (!stateValue || row.state === stateValue) && (!cityValue || row.city === cityValue) && (!environmentValue || row.environment === environmentValue) && (!neighborhoodValue || row.neighborhood === neighborhoodValue));
       options($('pdv'), finalRows.map((row) => `${row.code} - ${row.name}`));
-      $('pdv').value = state.pdv ? `${state.pdv.code} - ${state.pdv.name}` : '';
-      if (filtered.length === 0) $('pdv').value = '';
+      if (neighborhoodValue) $('pdv').insertAdjacentHTML('beforeend', `<option value="${NOT_FOUND_PDV}">Não encontrei o PDV incluso na listagem</option>`);
+      $('pdv').value = state.pdv?.registered === 'Sim' ? `${state.pdv.code} - ${state.pdv.name}` : '';
+      if (filtered.length === 0 && !neighborhoodValue) $('pdv').value = '';
+    }
+    
+    function populateUnlistedNetworks(current = '') {
+      options($('unlistedNetwork'), unique(activePdvs.map((row) => row.network)));
+      $('unlistedNetwork').insertAdjacentHTML('beforeend', `<option value="${NOT_FOUND_NETWORK}">Não encontrei a REDE inclusa na listagem</option>`);
+      $('unlistedNetwork').disabled = false;
+      $('unlistedNetwork').value = current;
+    }
+    
+    function syncUnlistedPdv() {
+      if (!state.pdv || state.pdv.registered !== 'Não') return;
+      const networkChoice = $('unlistedNetwork').value;
+      const typedNetwork = $('unlistedNetworkName').value.trim();
+      const network = networkChoice === NOT_FOUND_NETWORK ? typedNetwork : networkChoice;
+      const channel = $('unlistedChannel').value;
+      show('unlistedNetworkNameWrap', networkChoice === NOT_FOUND_NETWORK);
+      show('unlistedChannelWrap', Boolean(network));
+      state.pdv.network = network;
+      state.pdv.channel = channel;
+      $('channelInfo').textContent = network && channel ? `Canal informado: ${channel} | Rede: ${network}` : 'Informe a rede e o canal do PDV não cadastrado';
+      const ready = Boolean(network && channel);
+      show('brandsCard', ready);
+      show('familyCard', ready && channel.includes('FAMILY') && selectedBrands().length > 0);
+      if (ready) renderBrandQuestions();
+      $('exportButton').disabled = !ready;
+      setStep(ready ? 3 : 2);
     }
     
     function setPdv() {
       const raw = $('pdv').value;
-      state.pdv = activePdvs.find((row) => `${row.code} - ${row.name}` === raw) || null;
-      $('channelInfo').textContent = state.pdv ? `Canal identificado: ${state.pdv.channel || 'não informado'} | Rede: ${state.pdv.network || 'não informada'}` : 'Canal: selecione um PDV';
-      show('brandsCard', Boolean(state.pdv));
-      show('familyCard', Boolean(state.pdv && state.pdv.channel.toUpperCase().includes('FAMILY')) && selectedBrands().length > 0);
-      renderBrandQuestions();
+      const selected = activePdvs.find((row) => `${row.code} - ${row.name}` === raw);
+      if (raw === NOT_FOUND_PDV) {
+        state.pdv = {
+          id: '', code: '', name: 'PDV não encontrado na listagem', fantasyName: '',
+          city: $('city').value, state: $('state').value, environment: $('environment').value,
+          neighborhood: $('neighborhood').value, channel: '', network: '', flag: '', active: true,
+          registered: 'Não'
+        };
+        show('unlistedPdvCard', true);
+        populateUnlistedNetworks();
+        $('unlistedNetworkName').value = '';
+        $('unlistedChannel').value = '';
+        show('unlistedNetworkNameWrap', false);
+        show('unlistedChannelWrap', false);
+        syncUnlistedPdv();
+      } else {
+        state.pdv = selected ? {...selected, registered: 'Sim'} : null;
+        show('unlistedPdvCard', false);
+        $('channelInfo').textContent = state.pdv ? `Canal identificado: ${state.pdv.channel || 'não informado'} | Rede: ${state.pdv.network || 'não informada'}` : 'Canal: selecione um PDV';
+        show('brandsCard', Boolean(state.pdv));
+        show('familyCard', Boolean(state.pdv && state.pdv.channel.toUpperCase().includes('FAMILY')) && selectedBrands().length > 0);
+        renderBrandQuestions();
+        $('exportButton').disabled = !state.pdv;
+        setStep(state.pdv ? 3 : 2);
+      }
       show('relationshipCard', false);
       show('competitionCard', false);
       if (state.pdv) refreshGeneralFlow();
-      $('exportButton').disabled = !state.pdv;
-      setStep(state.pdv ? 3 : 2);
     }
     
     function refreshGeneralFlow() {
@@ -364,7 +417,7 @@
     
     document.addEventListener('DOMContentLoaded', () => {
       options($('state'), unique(activePdvs.map((row) => row.state)));
-      options($('city'), []); options($('environment'), []); options($('neighborhood'), []); options($('pdv'), []);
+      options($('city'), []); options($('environment'), []); options($('neighborhood'), []); options($('pdv'), []); options($('unlistedNetwork'), []);
       makeOptions('structureOptions', 'structure', ['Sim', 'Não', 'Parcialmente']);
       makeOptions('planogramOptions', 'planogram', ['Totalmente aderente', 'Parcialmente aderente', 'Não aderente']);
       makeOptions('exposureOptions', 'exposure', ['Sim', 'Não', 'Parcialmente']);
@@ -372,6 +425,9 @@
       $('state').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
       ['city','environment','neighborhood'].forEach((id) => $(id).addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); }));
       $('pdv').addEventListener('change', setPdv);
+      $('unlistedNetwork').addEventListener('change', syncUnlistedPdv);
+      $('unlistedNetworkName').addEventListener('input', syncUnlistedPdv);
+      $('unlistedChannel').addEventListener('change', syncUnlistedPdv);
       document.querySelectorAll('input[name="brand"]').forEach((input) => input.addEventListener('change', () => { renderBrandQuestions(); refreshConditionalState(); }));
       ['teamKnows','salesGuide','competitor'].forEach((id) => $(id).addEventListener('change', refreshGeneralFlow));
       ['validatedWith','visibilityBrand','salesLeader','bestExecution','campaignFocus'].forEach((id) => $(id).addEventListener('input', refreshGeneralFlow));
