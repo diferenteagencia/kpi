@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pesquisa de KPI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">Vulcabras | Diferente Ag.</div>
+      <h1>Pesquisa de KPI</h1>
+      <p>Formulário de avaliação da execução das marcas nos pontos de venda.</p>
+    </header>
+
+    <div class="steps" aria-label="Etapas do formulário">
+      <span class="step active" data-step="1">1 Cadastro</span>
+      <span class="step" data-step="2">2 Localização</span>
+      <span class="step" data-step="3">3 Avaliação</span>
+    </div>
+
+    <section class="card" id="profileCard">
+      <h2>Cadastro da visita</h2>
+      <p class="muted">Preencha seus dados para liberar a seleção do ponto de venda.</p>
+      <div class="grid two">
+        <label>Nome completo<input id="name" type="text" placeholder="Digite seu nome" autocomplete="name"></label>
+        <label>E-mail<input id="email" type="email" placeholder="Digite seu e-mail" autocomplete="email"></label>
+      </div>
+      <label>Empresa
+        <select id="company">
+          <option value="">Selecione</option>
+          <option>Vulcabras</option>
+          <option>Diferente Ag.</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card locked" id="locationCard" hidden>
+      <h2>Identificação do PDV</h2>
+      <div class="grid two">
+        <label>Estado<select id="state"></select></label>
+        <label>Cidade<select id="city"></select></label>
+        <label>Ambiente<select id="environment"></select></label>
+        <label>Bairro<select id="neighborhood"></select></label>
+      </div>
+      <label>PDV<select id="pdv"></select></label>
+      <div class="info" id="channelInfo">Canal: selecione um PDV</div>
+    </section>
+
+    <section class="card" id="brandsCard" hidden>
+      <h2>Marcas presentes no PDV</h2>
+      <p class="question">A loja possui produtos expostos de quais marcas?</p>
+      <div class="check-grid">
+        <label class="check"><input type="checkbox" name="brand" value="Mizuno"> Mizuno</label>
+        <label class="check"><input type="checkbox" name="brand" value="Olympikus"> Olympikus</label>
+        <label class="check"><input type="checkbox" name="brand" value="Under Armour"> Under Armour</label>
+      </div>
+    </section>
+
+    <section class="card" id="familyCard" hidden>
+      <h2>Avaliação da exposição</h2>
+      <div class="question-block" id="structureBlock">
+        <p class="question">A loja possui estrutura compatível para aplicação do planograma padrão?</p>
+        <div id="structureOptions"></div>
+      </div>
+      <div class="question-block" id="planogramBlock" hidden>
+        <p class="question">O planograma visual está aderente às possibilidades da loja?</p>
+        <div id="planogramOptions"></div>
+      </div>
+      <label id="planogramJustificationWrap" hidden>Justifique sua resposta<textarea id="planogramJustification"></textarea></label>
+      <div class="question-block" id="exposureBlock" hidden>
+        <p class="question">Mesmo sem aplicação integral do planograma, a exposição está organizada e visualmente adequada?</p>
+        <div id="exposureOptions"></div>
+      </div>
+      <label id="exposureJustificationWrap" hidden>Justifique sua resposta<textarea id="exposureJustification"></textarea></label>
+      <label id="evidenceWrap" class="evidence" hidden>Imagem para comprovação
+        <input id="evidence" type="file" accept="image/*" capture="environment">
+        <small>Obrigatória quando houver não conformidade.</small>
+      </label>
+    </section>
+
+    <section class="card" id="brandQuestionsCard" hidden>
+      <h2>Perguntas por marca</h2>
+      <div id="brandQuestions"></div>
+    </section>
+
+    <section class="card" id="relationshipCard" hidden>
+      <h2>Relacionamento e operação</h2>
+      <label>O gestor e os vendedores conhecem o promotor?<select id="teamKnows"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
+      <label id="validatedWithWrap" hidden>Com quem a informação foi validada?<input id="validatedWith" type="text"></label>
+      <label id="salesGuideWrap" hidden>A equipe conhece a Cola de Bolso?<select id="salesGuide"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
+    </section>
+
+    <section class="card" id="competitionCard" hidden>
+      <h2>Diagnóstico de concorrência</h2>
+      <label>Existe material de ponto de venda de marcas concorrentes?<select id="competitor"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></label>
+      <div id="competitionQuestions" hidden>
+        <label id="visibilityBrandWrap" hidden>Qual marca possui maior visibilidade neste PDV? (SKUs, importância comercial e merchandising)<input id="visibilityBrand" type="text"></label>
+        <label id="salesLeaderWrap" hidden>Qual marca é a líder de vendas neste PDV?<input id="salesLeader" type="text"></label>
+        <label id="bestExecutionWrap" hidden>Qual marca possui melhor execução visual atualmente? (Apenas MPDV)<input id="bestExecution" type="text"></label>
+        <label id="campaignFocusWrap" hidden>Com base na marca escolhida anteriormente, qual MPDV mais se destaca nesta loja?<input id="campaignFocus" type="text"></label>
+      </div>
+    </section>
+
+    <section class="card" id="observationsCard" hidden>
+      <h2>Gostaria de deixar alguma observação sobre as marcas?</h2>
+      <textarea id="observations" placeholder="Digite sua observação"></textarea>
+    </section>
+
+    <div class="actions">
+      <button class="secondary" id="resetButton" type="button">Recomeçar</button>
+      <button class="primary" id="exportButton" type="button" disabled>Exportar resposta para validação</button>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </main>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
