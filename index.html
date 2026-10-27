@@ -113,11 +113,6 @@
       </div>
     </section>
 
-    <section class="card" id="observationsCard" hidden>
-      <h2>Gostaria de deixar alguma observação sobre as marcas?</h2>
-      <textarea id="observations" placeholder="Digite sua observação"></textarea>
-    </section>
-
     <div class="actions">
       <button class="secondary" id="resetButton" type="button">Recomeçar</button>
       <button class="primary" id="exportButton" type="button" disabled>Exportar resposta para validação</button>
@@ -178,7 +173,6 @@
       renderBrandQuestions();
       show('relationshipCard', false);
       show('competitionCard', false);
-      show('observationsCard', false);
       if (state.pdv) refreshGeneralFlow();
       $('exportButton').disabled = !state.pdv;
       setStep(state.pdv ? 3 : 2);
@@ -186,7 +180,7 @@
     
     function refreshGeneralFlow() {
       const brandsComplete = state.brands.length > 0 && state.brands.every((brand) => { const answer = state.brandAnswers[brand] || {}; const campaignOk = answer.campaign && (answer.campaign !== 'Sim' || answer.campaignState?.length); const institutionalOk = answer.institutional && (answer.institutional !== 'Sim' || answer.institutionalState?.length); return Boolean(answer.accessories && answer.apparel && answer.footwear && campaignOk && institutionalOk); });
-      if (!brandsComplete) { show('relationshipCard', false); show('competitionCard', false); show('observationsCard', false); return; }
+      if (!brandsComplete) { show('relationshipCard', false); show('competitionCard', false); return; }
       show('relationshipCard', true);
       const teamKnows = $('teamKnows').value;
       const validatedWith = $('validatedWith').value.trim();
@@ -204,16 +198,6 @@
       show('salesLeaderWrap', competitor === 'Sim' && Boolean(visibilityBrand));
       show('bestExecutionWrap', competitor === 'Sim' && Boolean(visibilityBrand && salesLeader));
       show('campaignFocusWrap', competitor === 'Sim' && Boolean(visibilityBrand && salesLeader && bestExecution));
-      show('observationsCard', competitor === 'Não' || (competitor === 'Sim' && Boolean(visibilityBrand && salesLeader && bestExecution && $('campaignFocus').value.trim())));
-    }
-    
-    function renderBrandQuestions() {
-      state.brands = selectedBrands();
-      const host = $('brandQuestions');
-      host.innerHTML = state.brands.map((brand) => `<div class="brand-row"><h3>${escapeHtml(brand)}</h3><label>A loja possui acessórios da marca?<select data-brand="${escapeHtml(brand)}" data-key="accessories"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></label><label>Os acessórios estão organizados?<select data-brand="${escapeHtml(brand)}" data-key="accessoriesOrganized"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Parcialmente</option></select></label><label>A loja possui vestuário da marca?<select data-brand="${escapeHtml(brand)}" data-key="apparel"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></label><label>O vestuário está organizado?<select data-brand="${escapeHtml(brand)}" data-key="apparelOrganized"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Parcialmente</option></select></label><label>A loja possui calçados da marca?<select data-brand="${escapeHtml(brand)}" data-key="footwear"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></label><label>O PDV permite aplicação de MPDV da marca?<select data-brand="${escapeHtml(brand)}" data-key="mpdv"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Apenas com negociação</option></select></label></div>`).join('');
-      show('brandQuestionsCard', state.brands.length > 0);
-      host.querySelectorAll('select').forEach((select) => select.addEventListener('change', (event) => { const brand = event.target.dataset.brand; const key = event.target.dataset.key; state.brandAnswers[brand] = {...(state.brandAnswers[brand] || {}), [key]: event.target.value}; }));
-      show('familyCard', Boolean(state.pdv && state.pdv.channel.toUpperCase().includes('FAMILY')) && state.brands.length > 0);
     }
     
     function renderBrandQuestions() {
@@ -223,12 +207,17 @@
       const select = (brand, key, label, values) => { const area = key.toLowerCase().includes('accessor') ? 'ACESSÓRIOS' : key.toLowerCase().includes('apparel') ? 'VESTUÁRIO' : key.toLowerCase().includes('footwear') ? 'CALÇADOS' : key.toLowerCase().includes('mpdv') ? 'MPDV' : key.toLowerCase().includes('campaign') ? 'MATERIAL DE CAMPANHA' : key.toLowerCase().includes('institutional') ? 'MATERIAL INSTITUCIONAL' : ''; return `<label>${area ? `<span class="area-label">${area}</span>` : ''}${label}<select data-brand="${escapeHtml(brand)}" data-key="${key}"><option value="">Selecione</option>${values.map((value) => `<option>${escapeHtml(value)}</option>`).join('')}</select></label>`; };
       const checks = (brand, key) => materialStates.map((value) => `<label class="check"><input type="checkbox" data-brand="${escapeHtml(brand)}" data-key="${key}" data-value="${escapeHtml(value)}">${escapeHtml(value)}</label>`).join('');
       host.innerHTML = state.brands.map((brand) => `<div class="brand-row" data-brand="${escapeHtml(brand)}"><h3>${escapeHtml(brand)}</h3><div class="brand-step" data-step="accessories">${select(brand, 'accessories', 'A loja possui acessórios da marca?', ['Sim', 'Não'])}</div><div class="brand-step" data-step="accessoriesOrganized" hidden>${select(brand, 'accessoriesOrganized', 'Os acessórios estão organizados?', ['Sim', 'Não', 'Parcialmente'])}</div><div class="brand-step" data-step="apparel" hidden>${select(brand, 'apparel', 'A loja possui vestuário da marca?', ['Sim', 'Não'])}</div><div class="brand-step" data-step="apparelOrganized" hidden>${select(brand, 'apparelOrganized', 'O vestuário está organizado?', ['Sim', 'Não', 'Parcialmente'])}</div><div class="brand-step" data-step="footwear" hidden>${select(brand, 'footwear', 'A loja possui calçados da marca?', ['Sim', 'Não'])}</div><div class="brand-step" data-step="footwearOrganized" hidden>${select(brand, 'footwearOrganized', 'Os calçados estão organizados?', ['Sim', 'Não', 'Parcialmente'])}</div><div class="brand-step" data-step="mpdv" hidden>${select(brand, 'mpdv', 'O PDV permite aplicação de MPDV da marca?', ['Sim', 'Não', 'Apenas com negociação'])}</div><div class="brand-step" data-step="campaign" hidden>${select(brand, 'campaign', `A loja possui material de campanha de ${escapeHtml(brand)}? (foco em produto)`, ['Sim', 'Não'])}</div><div class="brand-step" data-step="campaignState" hidden><p class="question">Qual o estado do material de campanha?</p><div class="check-grid material-grid">${checks(brand, 'campaignState')}</div><label>Foto do material de campanha<input type="file" accept="image/*" capture="environment" data-brand="${escapeHtml(brand)}" data-key="campaignPhoto"></label></div><div class="brand-step" data-step="institutional" hidden>${select(brand, 'institutional', `A loja possui material institucional de ${escapeHtml(brand)}?`, ['Sim', 'Não'])}</div><div class="brand-step" data-step="institutionalState" hidden><p class="question">Qual o estado do material institucional?</p><div class="check-grid material-grid">${checks(brand, 'institutionalState')}</div><label>Foto do material institucional<input type="file" accept="image/*" capture="environment" data-brand="${escapeHtml(brand)}" data-key="institutionalPhoto"></label></div></div>`).join('');
+      state.brands.forEach((brand) => {
+        const row = [...host.querySelectorAll('.brand-row')].find((item) => item.dataset.brand === brand);
+        if (row) row.insertAdjacentHTML('beforeend', `<div class="brand-step" data-step="observations" hidden><label>Gostaria de deixar alguma observação sobre ${escapeHtml(brand)}?<textarea data-brand="${escapeHtml(brand)}" data-key="observations" placeholder="Digite a observação sobre esta marca"></textarea></label></div>`);
+      });
       show('brandQuestionsCard', state.brands.length > 0);
       state.brands.forEach((brand) => ['accessoriesOrganized', 'apparelOrganized', 'footwearOrganized'].forEach((key) => { const row = [...host.querySelectorAll('.brand-row')].find((item) => item.dataset.brand === brand); const selectControl = row?.querySelector(`select[data-key="${key}"]`); if (selectControl) selectControl.parentElement.insertAdjacentHTML('afterend', `<label class="organization-evidence" data-evidence-for="${key}" hidden>Foto da organização dos ${key === 'accessoriesOrganized' ? 'acessórios' : key === 'apparelOrganized' ? 'vestuários' : 'calçados'}<input type="file" accept="image/*" capture="environment" data-brand="${escapeHtml(brand)}" data-key="${key}Photo"></label>`); }));
       host.querySelectorAll('input[data-key="campaignPhoto"], input[data-key="institutionalPhoto"]').forEach((input) => { input.closest('label').hidden = true; });
       host.querySelectorAll('select').forEach((control) => control.addEventListener('change', (event) => { const brand = event.target.dataset.brand; const key = event.target.dataset.key; state.brandAnswers[brand] = {...(state.brandAnswers[brand] || {}), [key]: event.target.value}; syncOrganizationEvidence(brand, key); syncBrandFlow(brand); refreshGeneralFlow(); }));
       host.querySelectorAll('input[type="checkbox"]').forEach((control) => control.addEventListener('change', (event) => { const brand = event.target.dataset.brand; const key = event.target.dataset.key; const values = [...host.querySelectorAll(`input[data-brand="${CSS.escape(brand)}"][data-key="${key}"]:checked`)].map((input) => input.dataset.value); state.brandAnswers[brand] = {...(state.brandAnswers[brand] || {}), [key]: values}; syncMaterialEvidence(brand, key); syncBrandFlow(brand); refreshGeneralFlow(); }));
       host.querySelectorAll('input[type="file"]').forEach((control) => control.addEventListener('change', (event) => { const brand = event.target.dataset.brand; const key = event.target.dataset.key; state.brandAnswers[brand] = {...(state.brandAnswers[brand] || {}), [key]: event.target.files[0]?.name || ''}; syncBrandFlow(brand); refreshGeneralFlow(); }));
+      host.querySelectorAll('textarea[data-key="observations"]').forEach((control) => control.addEventListener('input', (event) => { const brand = event.target.dataset.brand; state.brandAnswers[brand] = {...(state.brandAnswers[brand] || {}), observations: event.target.value}; refreshGeneralFlow(); }));
       state.brands.forEach((brand) => { syncBrandFlow(brand); syncMaterialEvidence(brand, 'campaignState'); syncMaterialEvidence(brand, 'institutionalState'); syncOrganizationEvidence(brand, 'accessoriesOrganized'); syncOrganizationEvidence(brand, 'apparelOrganized'); syncOrganizationEvidence(brand, 'footwearOrganized'); });
       show('familyCard', Boolean(state.pdv && state.pdv.channel.toUpperCase().includes('FAMILY')) && state.brands.length > 0);
     }
@@ -258,7 +247,9 @@
       const answer = state.brandAnswers[brand] || {};
       const negative = ['Material sujo', 'Material danificado', 'Material positivado incorretamente', 'Material baixa visibilidade', 'Material com desgaste natural', 'Loja removeu parte ou todo material'];
       const campaignNeedsPhoto = (answer.campaignState || []).some((value) => negative.includes(value));
+      const institutionalNeedsPhoto = (answer.institutionalState || []).some((value) => negative.includes(value));
       const campaignComplete = answer.campaign === 'Não' || (answer.campaign === 'Sim' && answer.campaignState?.length && (!campaignNeedsPhoto || answer.campaignPhoto));
+      const institutionalComplete = answer.institutional === 'Não' || (answer.institutional === 'Sim' && answer.institutionalState?.length && (!institutionalNeedsPhoto || answer.institutionalPhoto));
       const open = (step, visible) => { const element = row.querySelector(`[data-step="${step}"]`); if (element) element.hidden = !visible; };
       open('accessoriesOrganized', answer.accessories === 'Sim');
       open('apparel', answer.accessories === 'Não' || Boolean(answer.accessoriesOrganized));
@@ -271,6 +262,7 @@
       open('campaignState', answer.campaign === 'Sim');
       open('institutional', Boolean(campaignComplete));
       open('institutionalState', answer.institutional === 'Sim');
+      open('observations', Boolean(institutionalComplete));
     }
     
     function refreshConditionalState() {
@@ -285,8 +277,87 @@
       show('evidenceWrap', planogram === 'Não aderente' || ['Não', 'Parcialmente'].includes(exposure));
     }
     
+    function valueText(value) {
+      return Array.isArray(value) ? value.join(', ') : String(value ?? '');
+    }
+    
+    function formatBrandAnswers() {
+      return state.brands.map((brand) => {
+        const answer = state.brandAnswers[brand] || {};
+        const fields = [
+          ['Acessórios', answer.accessories],
+          ['Acessórios organizados', answer.accessoriesOrganized],
+          ['Vestuário', answer.apparel],
+          ['Vestuário organizado', answer.apparelOrganized],
+          ['Calçados', answer.footwear],
+          ['Calçados organizados', answer.footwearOrganized],
+          ['MPDV', answer.mpdv],
+          ['Material de campanha', answer.campaign],
+          ['Estado do material de campanha', answer.campaignState],
+          ['Foto do material de campanha', answer.campaignPhoto],
+          ['Material institucional', answer.institutional],
+          ['Estado do material institucional', answer.institutionalState],
+          ['Foto do material institucional', answer.institutionalPhoto],
+          ['Observação da marca', answer.observations]
+        ].filter(([, value]) => valueText(value));
+        return `${brand}: ${fields.map(([label, value]) => `${label} = ${valueText(value)}`).join(' | ')}`;
+      }).join(' || ');
+    }
+    
     function collectResponse() {
-      return { generatedAt: new Date().toISOString(), respondent: { name: $('name').value.trim(), email: $('email').value.trim(), company: $('company').value }, pdv: state.pdv, brands: state.brands, family: {...state.family, planogramJustification: $('planogramJustification').value, exposureJustification: $('exposureJustification').value, evidenceFile: $('evidence').files[0]?.name || ''}, brandAnswers: state.brandAnswers, general: { teamKnows: $('teamKnows').value, validatedWith: $('validatedWith').value, salesGuide: $('salesGuide').value, competitor: $('competitor').value, visibilityBrand: $('visibilityBrand').value, salesLeader: $('salesLeader').value, bestExecution: $('bestExecution').value, campaignFocus: $('campaignFocus').value, observations: $('observations').value } };
+      const family = {
+        ...state.family,
+        planogramJustification: $('planogramJustification').value,
+        exposureJustification: $('exposureJustification').value,
+        evidenceFile: $('evidence').files[0]?.name || ''
+      };
+      const general = {
+        teamKnows: $('teamKnows').value,
+        validatedWith: $('validatedWith').value,
+        salesGuide: $('salesGuide').value,
+        competitor: $('competitor').value,
+        visibilityBrand: $('visibilityBrand').value,
+        salesLeader: $('salesLeader').value,
+        bestExecution: $('bestExecution').value,
+        campaignFocus: $('campaignFocus').value,
+      };
+      const familyText = [
+        ['Estrutura compatível', family.structure],
+        ['Planograma aderente', family.planogram],
+        ['Justificativa do planograma', family.planogramJustification],
+        ['Exposição organizada', family.exposure],
+        ['Justificativa da exposição', family.exposureJustification],
+        ['Evidência', family.evidenceFile]
+      ].filter(([, value]) => valueText(value)).map(([label, value]) => `${label} = ${valueText(value)}`).join(' | ');
+      const relationshipText = [
+        ['Conhece o promotor', general.teamKnows],
+        ['Validado com', general.validatedWith],
+        ['Conhece a Cola de Bolso', general.salesGuide]
+      ].filter(([, value]) => valueText(value)).map(([label, value]) => `${label} = ${valueText(value)}`).join(' | ');
+      const competitionText = [
+        ['Material concorrente', general.competitor],
+        ['Maior visibilidade', general.visibilityBrand],
+        ['Líder de vendas', general.salesLeader],
+        ['Melhor execução', general.bestExecution],
+        ['MPDV destaque', general.campaignFocus]
+      ].filter(([, value]) => valueText(value)).map(([label, value]) => `${label} = ${valueText(value)}`).join(' | ');
+      const brandObservation = (brand) => state.brandAnswers[brand]?.observations || '';
+      return {
+        generatedAt: new Date().toISOString(),
+        respondent: { name: $('name').value.trim(), email: $('email').value.trim(), company: $('company').value },
+        pdv: state.pdv,
+        brands: state.brands,
+        family,
+        brandAnswers: state.brandAnswers,
+        general,
+        brandAnswersText: formatBrandAnswers(),
+        observacaoOlympikus: brandObservation('Olympikus'),
+        observacaoMizuno: brandObservation('Mizuno'),
+        observacaoUnderArmour: brandObservation('Under Armour'),
+        familyText,
+        relationshipText,
+        competitionText
+      };
     }
     
     function profileReady() { const ready = $('name').value.trim() && $('email').validity.valid && $('company').value; show('locationCard', Boolean(ready)); if (ready) setStep(2); }
