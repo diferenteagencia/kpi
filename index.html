@@ -11,6 +11,7 @@
     label{display:flex;flex-direction:column;gap:7px;font-weight:600;margin:12px 0}input,select,textarea{width:100%;border:1px solid #bdcedc;border-radius:8px;background:#fff;color:#193b57;padding:12px;font:inherit}input:focus,select:focus,textarea:focus{outline:3px solid #0b72ce26;border-color:var(--blue)}textarea{min-height:90px;resize:vertical}.info{background:#edf6fd;border-left:4px solid var(--blue);border-radius:6px;padding:12px;margin-top:16px;font-weight:700}.check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:700px){.check-grid{grid-template-columns:1fr}}.check{display:flex;flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:13px;margin:0;background:#f9fbfd}.check input{width:auto}.question-block{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.question-block:first-of-type{border-top:0;margin-top:4px}.options{display:flex;flex-wrap:wrap;gap:10px}.options label{display:flex;flex-direction:row;align-items:center;margin:0;border:1px solid var(--line);border-radius:8px;padding:10px 13px;font-weight:500}.options input{width:auto}.evidence{background:#fff8e9;border:1px solid #f0d59c;border-radius:8px;padding:14px}.evidence small{color:#795b18}.brand-row{border-top:1px solid var(--line);padding:17px 0}.brand-row:first-child{border-top:0}.brand-row h3{margin:0 0 8px}.actions{display:flex;justify-content:space-between;gap:12px;margin-top:22px}.actions button{border:0;border-radius:8px;padding:13px 18px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--navy);color:#fff}.primary:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#e4edf4;color:#24455e}.status{min-height:22px;color:#24714f;font-weight:600;margin:14px 0}
     .brand-step[hidden]{display:none}.material-grid{margin:8px 0 14px}
     .area-label{display:block;color:#0757a5;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:5px;text-transform:uppercase}
+    .submission-success{max-width:680px;margin:80px auto;text-align:center;padding:48px 34px}.success-icon{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 20px;border-radius:50%;background:#e5f6ec;color:#207245;font-size:38px;font-weight:800}.submission-success h1{color:#123e66;font-size:34px}.submission-success p{max-width:500px;margin:0 auto 28px;color:var(--muted);font-size:18px;line-height:1.5}.submission-success .eyebrow{color:var(--blue);font-weight:800;opacity:1}.submission-success .primary{min-width:230px}
     [hidden]{display:none!important}
     
     
@@ -555,6 +556,20 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       response.evidences = await collectEvidenceFiles(response);
       return response;
     }
+
+    function showSubmissionSuccess() {
+      document.title = 'Resposta enviada com sucesso | Pesquisa de KPI';
+      document.querySelector('main.page').innerHTML = `
+        <section class="card submission-success" aria-live="polite">
+          <div class="success-icon" aria-hidden="true">✓</div>
+          <p class="eyebrow">Pesquisa de KPI</p>
+          <h1>Resposta enviada com sucesso!</h1>
+          <p>A visita foi registrada. Você já pode fechar esta página ou iniciar o registro de uma nova visita.</p>
+          <button class="primary" id="newFormButton" type="button">Enviar novo formulário</button>
+        </section>`;
+      document.getElementById('newFormButton').addEventListener('click', () => window.location.reload());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     
     function profileReady() { const ready = $('name').value.trim() && $('email').validity.valid && $('company').value; show('locationCard', Boolean(ready)); if (ready) setStep(2); }
     
@@ -603,6 +618,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
         const button = $('exportButton');
         button.disabled = true;
         $('status').textContent = 'Enviando resposta...';
+        let sent = false;
     
         try {
           const response = await fetch(FLOW_URL, {
@@ -611,12 +627,13 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
             body: JSON.stringify(await collectResponse())
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          $('status').textContent = 'Resposta enviada com sucesso.';
+          sent = true;
+          showSubmissionSuccess();
         } catch (error) {
           console.error(error);
           $('status').textContent = 'Não foi possível enviar a resposta. Tente novamente.';
         } finally {
-          button.disabled = false;
+          if (!sent) button.disabled = false;
         }
       });
       $('resetButton').addEventListener('click', () => window.location.reload());
