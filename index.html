@@ -129,7 +129,7 @@
 
     <div class="actions">
       <button class="secondary" id="resetButton" type="button">Recomeçar</button>
-      <button class="primary" id="exportButton" type="button" disabled>Exportar resposta para validação</button>
+      <button class="primary" id="exportButton" type="button" disabled>Enviar resposta</button>
     </div>
     <p id="status" class="status" role="status"></p>
   </main>
@@ -297,6 +297,10 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       const validatedWith = $('validatedWith').value.trim();
       const salesGuide = $('salesGuide').value;
       const competitor = $('competitor').value;
+      if (competitor !== 'Sim') {
+        $('visibilityBrand').value = '';
+        $('visibilityBrandOther').value = '';
+      }
       const visibilityBrand = selectedValue('visibilityBrand', 'visibilityBrandOther');
       const salesLeader = selectedValue('salesLeader', 'salesLeaderOther');
       const bestExecution = selectedValue('bestExecution', 'bestExecutionOther');
@@ -307,14 +311,14 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       show('validatedWithWrap', Boolean(teamKnows));
       show('salesGuideWrap', Boolean(teamKnows && validatedWith));
       show('competitionCard', relationshipComplete);
-      show('competitionQuestions', competitor === 'Sim');
+      show('competitionQuestions', Boolean(competitor));
       show('visibilityBrandWrap', competitor === 'Sim');
-      show('salesLeaderWrap', competitor === 'Sim' && Boolean(visibilityBrand));
-      show('bestExecutionWrap', competitor === 'Sim' && Boolean(visibilityBrand && salesLeader));
-      show('mpdvTypeWrap', competitor === 'Sim' && Boolean(visibilityBrand && salesLeader && bestExecution));
-      show('campaignFocusWrap', competitor === 'Sim' && Boolean(visibilityBrand && salesLeader && bestExecution && mpdvType));
-      show('campaignHighlightWrap', competitor === 'Sim' && mpdvType === 'Campanha' && Boolean(campaignFocus));
-      show('mpdvHighlightPhotoWrap', competitor === 'Sim' && Boolean(campaignFocus) && (mpdvType === 'Institucional' || Boolean(campaignHighlight)));
+      show('salesLeaderWrap', Boolean(competitor));
+      show('bestExecutionWrap', Boolean(salesLeader));
+      show('mpdvTypeWrap', Boolean(salesLeader && bestExecution));
+      show('campaignFocusWrap', Boolean(salesLeader && bestExecution && mpdvType));
+      show('campaignHighlightWrap', mpdvType === 'Campanha' && Boolean(campaignFocus));
+      show('mpdvHighlightPhotoWrap', Boolean(campaignFocus) && (mpdvType === 'Institucional' || Boolean(campaignHighlight)));
       syncOtherField('visibilityBrand', 'visibilityBrandOtherWrap');
       syncOtherField('salesLeader', 'salesLeaderOtherWrap');
       syncOtherField('bestExecution', 'bestExecutionOtherWrap');
