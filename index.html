@@ -11,7 +11,7 @@
     label{display:flex;flex-direction:column;gap:7px;font-weight:600;margin:12px 0}input,select,textarea{width:100%;border:1px solid #bdcedc;border-radius:8px;background:#fff;color:#193b57;padding:12px;font:inherit}input:focus,select:focus,textarea:focus{outline:3px solid #0b72ce26;border-color:var(--blue)}textarea{min-height:90px;resize:vertical}.info{background:#edf6fd;border-left:4px solid var(--blue);border-radius:6px;padding:12px;margin-top:16px;font-weight:700}.check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:700px){.check-grid{grid-template-columns:1fr}}.check{display:flex;flex-direction:row;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:13px;margin:0;background:#f9fbfd}.check input{width:auto}.question-block{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.question-block:first-of-type{border-top:0;margin-top:4px}.options{display:flex;flex-wrap:wrap;gap:10px}.options label{display:flex;flex-direction:row;align-items:center;margin:0;border:1px solid var(--line);border-radius:8px;padding:10px 13px;font-weight:500}.options input{width:auto}.evidence{background:#fff8e9;border:1px solid #f0d59c;border-radius:8px;padding:14px}.evidence small{color:#795b18}.brand-row,.family-brand-row{border-top:1px solid var(--line);padding:17px 0}.brand-row:first-child,.family-brand-row:first-child{border-top:0}.brand-row h3,.family-brand-row h3{margin:0 0 8px}.search-combobox{position:relative}.search-suggestions{position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid #a9c1d6;border-radius:8px;box-shadow:0 10px 22px #17466d2b}.search-option{display:block;width:100%;border:0;border-bottom:1px solid #e5edf3;border-radius:0;background:#fff;color:#193b57;padding:12px;text-align:left;font:inherit;line-height:1.3}.search-option:last-child{border-bottom:0}.search-option:hover,.search-option:focus{background:#edf6fd;color:#0757a5;outline:0}.field-help{display:block;color:var(--muted);font-size:.82rem;font-weight:400;line-height:1.35;margin-top:4px}.actions{display:flex;justify-content:space-between;gap:12px;margin-top:22px}.actions button{border:0;border-radius:8px;padding:13px 18px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--navy);color:#fff}.primary:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#e4edf4;color:#24455e}.status{min-height:22px;color:#24714f;font-weight:600;margin:14px 0}@media(max-width:700px){.search-suggestions{max-height:270px}.search-option{padding:14px;font-size:16px}.field-help{font-size:.86rem}}
     .brand-step[hidden]{display:none}.material-grid{margin:8px 0 14px}.question-explanation{margin:-4px 0 14px;color:var(--muted);font-weight:400;line-height:1.45}
     .area-label{display:block;color:#0757a5;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:5px;text-transform:uppercase}
-    .submission-success{max-width:680px;margin:80px auto;text-align:center;padding:48px 34px}.success-icon{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 20px;border-radius:50%;background:#e5f6ec;color:#207245;font-size:38px;font-weight:800}.submission-success h1{color:#123e66;font-size:34px}.submission-success p{max-width:500px;margin:0 auto 28px;color:var(--muted);font-size:18px;line-height:1.5}.submission-success .eyebrow{color:var(--blue);font-weight:800;opacity:1}.submission-success .primary{min-width:230px}
+    .submission-success{max-width:680px;margin:80px auto;text-align:center;padding:48px 34px}.success-icon{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 20px;border-radius:50%;background:#e5f6ec;color:#207245;font-size:38px;font-weight:800}.submission-success h1{color:#123e66;font-size:34px}.submission-success p{max-width:500px;margin:0 auto 28px;color:var(--muted);font-size:18px;line-height:1.5}.submission-success .eyebrow{color:var(--blue);font-weight:800;opacity:1}.submission-success .primary{min-width:230px}.field-pending{border-color:var(--danger)!important;box-shadow:0 0 0 3px #a2383822!important;border-radius:8px}.status.error{color:var(--danger);background:#fff1f1;border:1px solid #efc2c2;border-radius:8px;padding:11px 12px}
     [hidden]{display:none!important}
     
     
@@ -114,7 +114,7 @@
 
     <div class="actions">
       <button class="secondary" id="resetButton" type="button">Recomeçar</button>
-      <button class="primary" id="exportButton" type="button" disabled>Enviar resposta</button>
+      <button class="primary" id="exportButton" type="button">Enviar resposta</button>
     </div>
     <p id="status" class="status" role="status"></p>
   </main>
@@ -228,6 +228,34 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
     function familyEvidenceRequired(answer) { return ['Não aderente', 'Parcialmente aderente'].includes(answer.planogram) || ['Não', 'Parcialmente'].includes(answer.exposure); }
     function familyBrandComplete(brand) { const answer = familyAnswer(brand); return Boolean(answer.structure && answer.planogram && answer.exposure && (!familyEvidenceRequired(answer) || answer.evidenceFile)); }
     function familyAnswersComplete() { return !isFamilyPdv() || (state.brands.length > 0 && state.brands.every(familyBrandComplete)); }
+    function validationIssue(message, element) { return { message, element }; }
+    function firstPendingValidation() {
+      const visible = (element) => Boolean(element && !element.closest('[hidden]'));
+      const labelText = (element) => element.closest('label')?.childNodes[0]?.textContent.trim() || 'campo obrigatório';
+      if (!$('name').value.trim()) return validationIssue('informe seu nome completo.', $('name'));
+      if (!$('email').validity.valid) return validationIssue('informe um e-mail válido.', $('email'));
+      if (!$('company').value) return validationIssue('selecione sua empresa.', $('company'));
+      if (!state.pdv) return validationIssue('selecione o PDV visitado ou informe que ele não está na listagem.', $('locationCard'));
+      if (state.pdv.registered === 'Não' && !$('unlistedNetwork').value) return validationIssue('selecione a rede do PDV não encontrado.', $('unlistedNetwork'));
+      if (state.pdv.registered === 'Não' && $('unlistedNetwork').value === NOT_FOUND_NETWORK && !$('unlistedNetworkName').value.trim()) return validationIssue('informe o nome da nova rede.', $('unlistedNetworkName'));
+      if (state.pdv.registered === 'Não' && !$('unlistedChannel').value) return validationIssue('selecione o canal da nova rede.', $('unlistedChannel'));
+      if (!state.brands.length) return validationIssue('selecione ao menos uma marca presente no PDV.', $('brandsCard'));
+      for (const row of document.querySelectorAll('.brand-row')) {
+        const brand = row.dataset.brand;
+        for (const select of row.querySelectorAll('select')) if (visible(select) && !select.value) return validationIssue(`em ${brand}, complete: ${labelText(select)}.`, select);
+        for (const grid of row.querySelectorAll('.material-grid')) if (visible(grid) && !grid.querySelector('input:checked')) return validationIssue(`em ${brand}, informe o estado do material.`, grid);
+        for (const file of row.querySelectorAll('input[type="file"]')) if (visible(file) && !file.files?.length) return validationIssue(`inclua a imagem obrigatória em ${brand}.`, file);
+      }
+      for (const row of document.querySelectorAll('.family-brand-row')) {
+        const brand = row.dataset.familyBrand;
+        for (const block of row.querySelectorAll('.question-block')) if (visible(block) && !block.querySelector('input[type="radio"]:checked')) return validationIssue(`em ${brand}, responda: ${block.querySelector('.question')?.textContent || 'avaliação de exposição'}.`, block);
+        for (const text of row.querySelectorAll('textarea')) if (visible(text) && !text.value.trim()) return validationIssue(`em ${brand}, justifique a resposta informada.`, text);
+        for (const file of row.querySelectorAll('input[type="file"]')) if (visible(file) && !file.files?.length) return validationIssue(`inclua a imagem de comprovação da exposição de ${brand}.`, file);
+      }
+      for (const cardId of ['relationshipCard','competitionCard']) { const card = $(cardId); if (!visible(card)) continue; for (const field of card.querySelectorAll('select,input[type="text"]')) if (visible(field) && !field.value.trim()) return validationIssue(`complete: ${labelText(field)}.`, field); }
+      return null;
+    }
+    function showValidationIssue(issue) { document.querySelectorAll('.field-pending').forEach((element) => element.classList.remove('field-pending')); const status = $('status'); status.textContent = `Antes de enviar: ${issue.message}`; status.classList.add('error'); const element = issue.element; if (!element) return; element.classList.add('field-pending'); element.scrollIntoView({ behavior: 'smooth', block: 'center' }); const focusTarget = element.matches('input, select, textarea') ? element : element.querySelector('input, select, textarea'); setTimeout(() => focusTarget?.focus({ preventScroll: true }), 350); }
     function familyRadioOptions(brand, key, values, current = '') { return `<div class="options">${values.map((value) => `<label><input type="radio" name="family-${escapeHtml(brand)}-${key}" data-family-brand="${escapeHtml(brand)}" data-family-key="${key}" value="${escapeHtml(value)}" ${value === current ? 'checked' : ''}>${escapeHtml(value)}</label>`).join('')}</div>`; }
     function renderFamilyQuestions() { const host = $('familyQuestions'), brands = isFamilyPdv() ? state.brands : []; state.family = Object.fromEntries(brands.map((brand) => [brand, familyAnswer(brand)])); host.innerHTML = brands.map((brand) => { const answer = familyAnswer(brand); return `<div class="family-brand-row" data-family-brand="${escapeHtml(brand)}"><h3>${escapeHtml(brand)}</h3><div class="question-block" data-family-step="structure"><p class="question">A loja possui estrutura compatível para aplicação do planograma padrão de ${escapeHtml(brand)}?</p>${familyRadioOptions(brand, 'structure', ['Sim', 'Não', 'Parcialmente'], answer.structure)}</div><div class="question-block" data-family-step="planogram" hidden><p class="question">O planograma visual de ${escapeHtml(brand)} está aderente às possibilidades da loja?</p>${familyRadioOptions(brand, 'planogram', ['Totalmente aderente', 'Parcialmente aderente', 'Não aderente'], answer.planogram)}</div><label data-family-step="planogramJustification" hidden>Justifique sua resposta<textarea data-family-brand="${escapeHtml(brand)}" data-family-key="planogramJustification">${escapeHtml(answer.planogramJustification || '')}</textarea></label><div class="question-block" data-family-step="exposure" hidden><p class="question">Mesmo sem aplicação integral do planograma, a exposição de ${escapeHtml(brand)} está organizada e visualmente adequada?</p>${familyRadioOptions(brand, 'exposure', ['Sim', 'Não', 'Parcialmente'], answer.exposure)}</div><label data-family-step="exposureJustification" hidden>Justifique sua resposta<textarea data-family-brand="${escapeHtml(brand)}" data-family-key="exposureJustification">${escapeHtml(answer.exposureJustification || '')}</textarea></label><label class="evidence" data-family-step="evidence" hidden>Imagem para comprovação da exposição de ${escapeHtml(brand)}<input type="file" accept="image/*" capture="environment" data-family-brand="${escapeHtml(brand)}" data-family-key="evidenceFile"><small>Obrigatória quando houver não conformidade.</small></label></div>`; }).join(''); show('familyCard', brands.length > 0); host.querySelectorAll('input[data-family-brand][type="radio"]').forEach((input) => input.addEventListener('change', (event) => { const { familyBrand: brand, familyKey: key } = event.target.dataset; state.family[brand] = { ...familyAnswer(brand), [key]: event.target.value }; refreshFamilyFlow(brand); refreshGeneralFlow(); })); host.querySelectorAll('textarea[data-family-brand]').forEach((input) => input.addEventListener('input', (event) => { const { familyBrand: brand, familyKey: key } = event.target.dataset; state.family[brand] = { ...familyAnswer(brand), [key]: event.target.value }; })); host.querySelectorAll('input[data-family-brand][type="file"]').forEach((input) => input.addEventListener('change', (event) => { const { familyBrand: brand, familyKey: key } = event.target.dataset; state.family[brand] = { ...familyAnswer(brand), [key]: event.target.files[0]?.name || '' }; refreshFamilyFlow(brand); refreshGeneralFlow(); })); brands.forEach(refreshFamilyFlow); }
     function refreshFamilyFlow(brand) { const row = [...document.querySelectorAll('.family-brand-row')].find((item) => item.dataset.familyBrand === brand); if (!row) return; const answer = familyAnswer(brand), open = (step, visible) => { const element = row.querySelector(`[data-family-step="${step}"]`); if (element) element.hidden = !visible; }; open('planogram', Boolean(answer.structure)); open('planogramJustification', ['Não aderente', 'Parcialmente aderente'].includes(answer.planogram)); open('exposure', Boolean(answer.planogram)); open('exposureJustification', ['Não', 'Parcialmente'].includes(answer.exposure)); open('evidence', familyEvidenceRequired(answer)); }
@@ -275,7 +303,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       show('brandsCard', ready);
       show('familyCard', ready && channel.includes('FAMILY') && selectedBrands().length > 0);
       if (ready) renderBrandQuestions();
-      $('exportButton').disabled = !ready;
+      $('exportButton').disabled = false;
       setStep(ready ? 3 : 2);
     }
     
@@ -304,7 +332,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
         show('brandsCard', Boolean(state.pdv));
         show('familyCard', Boolean(state.pdv && state.pdv.channel.toUpperCase().includes('FAMILY')) && selectedBrands().length > 0);
         renderBrandQuestions();
-        $('exportButton').disabled = !state.pdv;
+        $('exportButton').disabled = false;
         setStep(state.pdv ? 3 : 2);
       }
       show('relationshipCard', false);
@@ -614,28 +642,12 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       $('campaignFocus').addEventListener('change', refreshGeneralFlow);
       ['visibilityBrandOther','salesLeaderOther','campaignFocusOther','campaignHighlight'].forEach((id) => $(id).addEventListener('input', refreshGeneralFlow));
       $('exportButton').addEventListener('click', async () => {
-        const negative = ['Material sujo', 'Material danificado', 'Material positivado incorretamente', 'Material baixa visibilidade', 'Material com desgaste natural', 'Loja removeu parte ou todo material'];
-        const invalid = state.brands.find((brand) => {
-          const answer = state.brandAnswers[brand] || {};
-          const campaignNeedsPhoto = (answer.campaignState || []).some((value) => negative.includes(value));
-          const institutionalNeedsPhoto = (answer.institutionalState || []).some((value) => negative.includes(value));
-          return (answer.campaign === 'Sim' && !answer.campaignState?.length) ||
-            (answer.institutional === 'Sim' && !answer.institutionalState?.length) ||
-            (campaignNeedsPhoto && !answer.campaignPhoto) ||
-            (institutionalNeedsPhoto && !answer.institutionalPhoto);
-        });
-        if (invalid) {
-          $('status').textContent = `Complete a avaliação do material e inclua a foto quando houver condição negativa em ${invalid}.`;
-          return;
-        }
-      const incompleteFamilyBrand = isFamilyPdv() ? state.brands.find((brand) => !familyBrandComplete(brand)) : '';
-      if (incompleteFamilyBrand) {
-        $('status').textContent = `Complete a avaliação de exposição e inclua a foto quando houver não conformidade em ${incompleteFamilyBrand}.`;
-        return;
-      }
+        const pending = firstPendingValidation();
+        if (pending) { showValidationIssue(pending); return; }
     
         const button = $('exportButton');
         button.disabled = true;
+        $('status').classList.remove('error');
         $('status').textContent = 'Enviando resposta...';
         let sent = false;
     
