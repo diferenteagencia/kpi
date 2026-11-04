@@ -51,11 +51,11 @@
       <h2>Identificação do PDV</h2>
       <div class="grid two">
         <label>Estado<select id="state"></select></label>
-        <label>Cidade<div class="search-combobox"><input id="city" type="search" placeholder="Digite para localizar a cidade" autocomplete="off" spellcheck="false"><div id="citySuggestions" class="search-suggestions" role="listbox" hidden></div></div></label>
+        <label>Cidade<div class="search-combobox"><input id="city" type="text" inputmode="search" placeholder="Digite para localizar a cidade" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="done"><div id="citySuggestions" class="search-suggestions" role="listbox" hidden></div></div></label>
         <label>Ambiente<select id="environment"></select></label>
         <label>Endereço<select id="address"></select><small class="field-help">Caso não saiba o endereço, pesquise no campo PDV o nome da loja.</small></label>
       </div>
-      <label>PDV<div class="search-combobox"><input id="pdv" type="search" placeholder="Digite para localizar o PDV" autocomplete="off" spellcheck="false"><div id="pdvSuggestions" class="search-suggestions" role="listbox" hidden></div></div></label>
+      <label>PDV<div class="search-combobox"><input id="pdv" type="text" inputmode="search" placeholder="Digite para localizar o PDV" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="done"><div id="pdvSuggestions" class="search-suggestions" role="listbox" hidden></div></div></label>
       <div class="info" id="channelInfo">Canal: selecione um PDV</div>
       <div class="card nested" id="unlistedPdvCard" hidden>
         <h3>PDV não encontrado na listagem</h3>
@@ -592,7 +592,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       options($('campaignFocus'), []);
       ['name','email','company'].forEach((id) => $(id).addEventListener('input', profileReady));
       $('state').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
-      $('city').addEventListener('input', () => { state.pdv = null; refreshCitySuggestions(); const cityIsValid = activePdvs.some((row) => row.state === $('state').value && row.city === $('city').value); if (cityIsValid) { refreshLocation(); setPdv(); } else { $('pdv').value = ''; populatePdvOptions([], false); setPdv(); } });
+      $('city').addEventListener('input', () => { state.pdv = null; refreshCitySuggestions(); const cityIsValid = activePdvs.some((row) => row.state === $('state').value && row.city === $('city').value); if (cityIsValid) { refreshLocation(); setPdv(); refreshCitySuggestions(); } else { $('pdv').value = ''; populatePdvOptions([], false); setPdv(); } });
       $('city').addEventListener('focus', refreshCitySuggestions);
       $('city').addEventListener('blur', () => setTimeout(() => hideSearchSuggestions('citySuggestions'), 150));
       $('city').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
