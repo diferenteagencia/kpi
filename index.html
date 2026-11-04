@@ -51,7 +51,7 @@
       <h2>Identificação do PDV</h2>
       <div class="grid two">
         <label>Estado<select id="state"></select></label>
-        <label>Cidade<select id="city"></select></label>
+        <label>Cidade<input id="city" type="text" list="cityOptions" placeholder="Digite para localizar a cidade" autocomplete="off"><datalist id="cityOptions"></datalist></label>
         <label>Ambiente<select id="environment"></select></label>
         <label>Endereço<select id="address"></select></label>
       </div>
@@ -176,14 +176,35 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       select.innerHTML = `<option value="">${placeholder}</option>` + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
       select.disabled = values.length === 0;
     }
+    function normalizeSearch(value) { return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR'); }
+    function datalistOptions(id, values) { $(id).innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join(''); }
     function pdvAddress(row) { return String(row.address || row.neighborhood || '').trim(); }
     function pdvOptionLabel(row) { const address = pdvAddress(row); return `${row.code} - ${row.name}${address ? ` | ${address}` : ''}`; }
-    function populatePdvOptions(rows, addressSelected) {
+    function pdvRowsForLocation() {
+      const stateValue = $('state').value;
+      const cityValue = $('city').value;
+      const environmentValue = $('environment').value;
+      const addressValue = $('address').value;
+      return activePdvs.filter((row) => row.state === stateValue && row.city === cityValue && (!environmentValue || row.environment === environmentValue) && (!addressValue || pdvAddress(row) === addressValue));
+    }
+    function populatePdvOptions(rows, locationReady) {
       const values = rows.map(pdvOptionLabel);
-      if (addressSelected) values.push(NOT_FOUND_PDV);
-      $('pdvOptions').innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join('');
-      $('pdv').disabled = !addressSelected;
-      $('pdv').placeholder = addressSelected ? 'Digite código, nome ou endereço do PDV' : 'Selecione um endereço primeiro';
+      if (locationReady) values.push(NOT_FOUND_PDV);
+      datalistOptions('pdvOptions', values);
+      $('pdv').disabled = !locationReady;
+      $('pdv').placeholder = locationReady ? 'Digite código, nome ou endereço do PDV' : 'Selecione estado e cidade primeiro';
+    }
+    function refreshCitySuggestions() {
+      const stateValue = $('state').value;
+      const query = normalizeSearch($('city').value);
+      const cities = unique(activePdvs.filter((row) => row.state === stateValue).map((row) => row.city));
+      datalistOptions('cityOptions', cities.filter((city) => normalizeSearch(city).includes(query)));
+    }
+    function filterPdvSuggestions() {
+      if (!$('state').value || !$('city').value) return;
+      const query = normalizeSearch($('pdv').value);
+      const rows = pdvRowsForLocation().filter((row) => normalizeSearch(pdvOptionLabel(row)).includes(query));
+      populatePdvOptions(rows, true);
     }
     function selectedValue(selectId, otherId) {
       const select = $(selectId);
@@ -224,19 +245,23 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
     
     function refreshLocation() {
       const stateValue = $('state').value;
-      const cityValue = $('city').value;
+      let cityValue = $('city').value;
       const environmentValue = $('environment').value;
       const addressValue = $('address').value;
-      options($('city'), unique(activePdvs.filter((row) => !stateValue || row.state === stateValue).map((row) => row.city)));
+      const cities = unique(activePdvs.filter((row) => row.state === stateValue).map((row) => row.city));
+      if (!cities.includes(cityValue)) cityValue = '';
       $('city').value = cityValue;
+      $('city').disabled = !stateValue;
+      $('city').placeholder = stateValue ? 'Digite para localizar a cidade' : 'Selecione o estado primeiro';
+      datalistOptions('cityOptions', cities);
       options($('environment'), unique(activePdvs.filter((row) => (!stateValue || row.state === stateValue) && (!cityValue || row.city === cityValue)).map((row) => row.environment)));
       $('environment').value = environmentValue;
       options($('address'), unique(activePdvs.filter((row) => (!stateValue || row.state === stateValue) && (!cityValue || row.city === cityValue) && (!environmentValue || row.environment === environmentValue)).map(pdvAddress)));
       $('address').value = addressValue;
-      const finalRows = activePdvs.filter((row) => (!stateValue || row.state === stateValue) && (!cityValue || row.city === cityValue) && (!environmentValue || row.environment === environmentValue) && (!addressValue || pdvAddress(row) === addressValue));
-      populatePdvOptions(finalRows, Boolean(addressValue));
+      const locationReady = Boolean(stateValue && cityValue);
+      populatePdvOptions(locationReady ? pdvRowsForLocation() : [], locationReady);
       $('pdv').value = state.pdv?.registered === 'Sim' ? pdvOptionLabel(state.pdv) : '';
-      if (!addressValue) $('pdv').value = '';
+      if (!locationReady) $('pdv').value = '';
     }
     
     function populateUnlistedNetworks(current = '') {
@@ -587,7 +612,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
     
     document.addEventListener('DOMContentLoaded', () => {
       options($('state'), unique(activePdvs.map((row) => row.state)));
-      options($('city'), []); options($('environment'), []); options($('address'), []); $('pdv').disabled = true; options($('unlistedNetwork'), []);
+      $('city').disabled = true; $('city').placeholder = 'Selecione o estado primeiro'; datalistOptions('cityOptions', []); options($('environment'), []); options($('address'), []); $('pdv').disabled = true; options($('unlistedNetwork'), []);
       options($('visibilityBrand'), COMPETITOR_BRANDS);
       options($('salesLeader'), COMPETITOR_BRANDS);
       options($('bestExecution'), COMPETITOR_BRANDS);
@@ -597,7 +622,10 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       makeOptions('exposureOptions', 'exposure', ['Sim', 'Não', 'Parcialmente']);
       ['name','email','company'].forEach((id) => $(id).addEventListener('input', profileReady));
       $('state').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
-      ['city','environment','address'].forEach((id) => $(id).addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); }));
+      $('city').addEventListener('input', refreshCitySuggestions);
+      $('city').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
+      ['environment','address'].forEach((id) => $(id).addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); }));
+      $('pdv').addEventListener('input', filterPdvSuggestions);
       $('pdv').addEventListener('change', setPdv);
       $('unlistedNetwork').addEventListener('change', syncUnlistedPdv);
       $('unlistedNetworkName').addEventListener('input', syncUnlistedPdv);
