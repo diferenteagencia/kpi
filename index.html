@@ -108,7 +108,7 @@
         <label id="campaignFocusWrap" hidden><span id="campaignFocusQuestion">Qual material do MPDV mais se destaca nesta loja?</span><select id="campaignFocus"></select></label>
         <label id="campaignFocusOtherWrap" hidden>Digite o nome do MPDV/material<input id="campaignFocusOther" type="text" placeholder="Digite o MPDV ou material"></label>
         <label id="campaignHighlightWrap" hidden>Qual campanha está em destaque?<input id="campaignHighlight" type="text" placeholder="Digite o nome da campanha"></label>
-        <label id="mpdvHighlightPhotoWrap" hidden>Imagem do MPDV em destaque <small>(opcional)</small><input id="mpdvHighlightPhoto" type="file" accept="image/*" capture="environment"></label>
+        <label id="mpdvHighlightPhotoWrap" hidden>Imagem do MPDV em destaque <small>(opcional)</small><input id="mpdvHighlightPhoto" type="file" accept="image/*"></label>
       </div>
     </section>
 
@@ -150,6 +150,15 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       return `kpi-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
     const state = { pdv: null, brands: [], family: {}, brandAnswers: {}, responseId: createResponseId() };
+
+    // Não força a câmera: em celulares, o seletor nativo poderá oferecer Câmera e Galeria.
+    function enableGalleryUploads(scope = document) {
+      if (scope.matches?.('input[type="file"][capture]')) scope.removeAttribute('capture');
+      scope.querySelectorAll?.('input[type="file"][capture]').forEach((input) => input.removeAttribute('capture'));
+    }
+    enableGalleryUploads();
+    new MutationObserver((entries) => entries.forEach((entry) => entry.addedNodes.forEach(enableGalleryUploads)))
+      .observe(document.documentElement, { childList: true, subtree: true });
     
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
