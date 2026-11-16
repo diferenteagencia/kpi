@@ -92,7 +92,7 @@
       <label>O gestor e os vendedores conhecem o promotor?<select id="teamKnows"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
       <label id="validatedWithWrap" hidden><span id="validatedWithLabel">Com quem a informação foi validada?</span><input id="validatedWith" type="text"></label>
       <label id="salesGuideWrap" hidden>A equipe conhece a Cola de Bolso?<select id="salesGuide"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
-      <label id="cooperativeActionWrap" hidden>Existe alguma ação cooperada na loja? Se sim, de qual marca?<select id="cooperativeAction"><option value="">Selecione</option><option value="Não">Não</option></select></label>
+      <div id="cooperativeActionWrap" hidden><p class="question">Existe alguma ação cooperada na loja? Se sim, selecione uma ou mais marcas.</p><div id="cooperativeActionChoices" class="check-grid"></div></div>
     </section>
 
     <section class="card" id="competitionCard" hidden>
@@ -555,7 +555,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
         teamKnows: $('teamKnows').value,
         validatedWith: $('validatedWith').value,
         salesGuide: $('salesGuide').value,
-        cooperativeAction: $('cooperativeAction').value,
+        cooperativeAction: (state.cooperativeActions || []).join(', '),
         competitor: $('competitor').value,
         visibilityBrand: selectedValue('visibilityBrand', 'visibilityBrandOther'),
         salesLeader: selectedValue('salesLeader', 'salesLeaderOther'),
@@ -726,12 +726,13 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
             if (isFamilyPdv()) state.brands.forEach((brand) => { const family = state.family[brand], answer = state.brandAnswers[brand] || {}; if (family.structure !== 'Sim') Object.assign(family, { planogram: 'Totalmente aderente' }); if (family.planogram === 'Totalmente aderente' && !family.exposure) family.exposure = 'Sim'; answer.footwear = 'Não'; if (answer.mpdvType === 'Não') { answer.campaign = 'Não'; answer.institutional = 'Não'; } if (answer.mpdvType === 'Campanha') answer.institutional = 'Não'; if (answer.mpdvType === 'Institucional') answer.campaign = 'Não'; });
             previousRefresh();
             restore.forEach(([brand, family, answer]) => { state.family[brand] = family; state.brandAnswers[brand] = answer; });
-            const cooperative = $('cooperativeAction'), previous = cooperative.value;
-            cooperative.innerHTML = '<option value="">Selecione</option><option value="Não">Não</option>' + state.brands.map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`).join('');
-            cooperative.value = [...cooperative.options].some((option) => option.value === previous) ? previous : '';
+            const cooperative = $('cooperativeActionChoices'), previous = (state.cooperativeActions || []).filter((value) => value === 'Não' || state.brands.includes(value));
+            state.cooperativeActions = previous;
+            cooperative.innerHTML = ['Não', ...state.brands].map((brand) => `<label class="check"><input type="checkbox" value="${escapeHtml(brand)}" ${previous.includes(brand) ? 'checked' : ''}>${escapeHtml(brand)}</label>`).join('');
+            cooperative.querySelectorAll('input').forEach((input) => input.addEventListener('change', (event) => { const value = event.target.value, selected = new Set(state.cooperativeActions || []); if (event.target.checked) { if (value === 'Não') { selected.clear(); selected.add('Não'); } else { selected.delete('Não'); selected.add(value); } } else selected.delete(value); state.cooperativeActions = [...selected]; refreshGeneralFlow(); }));
             const relationshipReady = !$('relationshipCard').hidden && Boolean($('teamKnows').value && $('validatedWith').value.trim() && $('salesGuide').value);
             show('cooperativeActionWrap', relationshipReady);
-            if (!cooperative.value) show('competitionCard', false);
+            if (!(state.cooperativeActions || []).length) show('competitionCard', false);
           };
           document.addEventListener('change', (event) => {
             const control = event.target;
@@ -745,12 +746,11 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
             const issue = previousValidation();
             restore.forEach(([brand, family, answer]) => { state.family[brand] = family; state.brandAnswers[brand] = answer; });
             if (issue) return issue;
-            if (!$('cooperativeAction').value) return validationIssue('Informe se existe ação cooperada na loja e, se houver, selecione a marca.', $('cooperativeAction'));
+            if (!(state.cooperativeActions || []).length) return validationIssue('Informe se existe ação cooperada na loja e, se houver, selecione a(s) marca(s).', $('cooperativeActionChoices'));
             return null;
           };
           const previousRender = renderBrandQuestions;
           renderBrandQuestions = function() { previousRender(); setTimeout(reviseFamily, 0); };
-          document.addEventListener('DOMContentLoaded', () => $('cooperativeAction').addEventListener('change', refreshGeneralFlow));
         })();
       </script>
 </body>
