@@ -92,6 +92,7 @@
       <label>O gestor e os vendedores conhecem o promotor?<select id="teamKnows"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
       <label id="validatedWithWrap" hidden><span id="validatedWithLabel">Com quem a informação foi validada?</span><input id="validatedWith" type="text"></label>
       <label id="salesGuideWrap" hidden>A equipe conhece a Cola de Bolso?<select id="salesGuide"><option value="">Selecione</option><option>Sim</option><option>Não</option><option>Não foi possível validar</option></select></label>
+      <label id="cooperativeActionWrap" hidden>Existe alguma ação cooperada na loja? Se sim, de qual marca?<select id="cooperativeAction"><option value="">Selecione</option><option value="Não">Não</option></select></label>
     </section>
 
     <section class="card" id="competitionCard" hidden>
@@ -554,6 +555,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
         teamKnows: $('teamKnows').value,
         validatedWith: $('validatedWith').value,
         salesGuide: $('salesGuide').value,
+        cooperativeAction: $('cooperativeAction').value,
         competitor: $('competitor').value,
         visibilityBrand: selectedValue('visibilityBrand', 'visibilityBrandOther'),
         salesLeader: selectedValue('salesLeader', 'salesLeaderOther'),
@@ -570,7 +572,8 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       const relationshipText = [
         ['Conhece o promotor', general.teamKnows],
         [general.teamKnows === 'Não foi possível validar' ? 'Motivo da não validação' : 'Validado com', general.validatedWith],
-        ['Conhece a Cola de Bolso', general.salesGuide]
+        ['Conhece a Cola de Bolso', general.salesGuide],
+        ['Ação cooperada', general.cooperativeAction]
       ].filter(([, value]) => valueText(value)).map(([label, value]) => `${label} = ${valueText(value)}`).join(' | ');
       const competitionText = [
         ['Material concorrente', general.competitor],
@@ -679,6 +682,76 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       $('resetButton').addEventListener('click', () => window.location.reload());
     });
     
+      </script>
+      <script>
+        /* Revisão do fluxo Family Footwear: aplica-se após o formulário-base ser montado. */
+        (() => {
+          const previousValidation = firstPendingValidation;
+          const previousRefresh = refreshGeneralFlow;
+          const familyNegative = (answer) => ['Não', 'Parcialmente'].includes(answer.exposure);
+          const productReady = (answer, family = false) => (family ? ['apparel', 'accessories'] : ['footwear', 'apparel', 'accessories']).every((area) => answer[area] === 'Não' || (answer[area] === 'Sim' && answer[`${area}Organized`]));
+          const materialReady = (answer, type) => { const key = type === 'Campanha' ? 'campaign' : 'institutional', states = answer[`${key}State`] || [], photo = answer[`${key}Photo`], bad = ['Material sujo','Material danificado','Material positivado incorretamente','Material baixa visibilidade','Material com desgaste natural','Loja removeu parte ou todo material']; return answer[key] === 'Não' || (answer[key] === 'Sim' && states.length && (!states.some((value) => bad.includes(value)) || photo)); };
+          const familyReady = (brand) => { const answer = familyAnswer(brand), needsExposure = ['Não', 'Parcialmente'].includes(answer.structure) || (answer.structure === 'Sim' && answer.planogram && answer.planogram !== 'Totalmente aderente'); return answer.structure === 'Sim' && answer.planogram === 'Totalmente aderente' || (needsExposure && answer.exposure && (!familyNegative(answer) || answer.evidenceFile)); };
+          const step = (row, name, visible) => { const item = row.querySelector(`[data-step="${name}"]`); if (item) item.hidden = !visible; };
+          const familyStep = (row, name, visible) => { const item = row.querySelector(`[data-family-step="${name}"]`); if (item) item.hidden = !visible; };
+          function reviseFamily() {
+            if (!isFamilyPdv()) return;
+            $('familyCard').hidden = true;
+            state.brands.forEach((brand) => {
+              const row = document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"]`), family = document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"]`);
+              if (!row || !family) return;
+              row.insertBefore(family, row.querySelector('.brand-step'));
+              const answer = state.brandAnswers[brand] || {}, exposure = familyAnswer(brand);
+              family.querySelector('[data-family-step="structure"] .question').textContent = `A loja permite a positivação do planograma de ${brand}? Considere a capacidade e a estrutura disponíveis.`;
+              familyStep(family, 'planogram', exposure.structure === 'Sim');
+              familyStep(family, 'planogramJustification', ['Não aderente','Parcialmente aderente'].includes(exposure.planogram));
+              familyStep(family, 'exposure', ['Não','Parcialmente'].includes(exposure.structure) || (Boolean(exposure.planogram) && exposure.planogram !== 'Totalmente aderente'));
+              familyStep(family, 'exposureJustification', ['Não','Parcialmente'].includes(exposure.exposure));
+              familyStep(family, 'evidence', familyNegative(exposure));
+              ['footwear','footwearOrganized'].forEach((name) => step(row, name, false));
+              ['apparel','apparelOrganized','accessories','accessoriesOrganized','mpdv','campaign','campaignState','institutional','institutionalState','observations'].forEach((name) => { const item = row.querySelector(`[data-step="${name}"]`); if (item) row.append(item); });
+              const mpdv = row.querySelector('select[data-key="mpdv"]');
+              if (mpdv && !mpdv.dataset.familyMpdvType) { const label = mpdv.closest('label'); label.querySelector('.area-label')?.remove(); [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)?.replaceWith('A loja possui MPDV da marca? Se sim, qual o tipo?'); mpdv.innerHTML = '<option value="">Selecione</option><option>Não</option><option>Campanha</option><option>Institucional</option>'; mpdv.dataset.familyMpdvType = 'true'; }
+              if (mpdv?.dataset.familyMpdvType) mpdv.value = answer.mpdvType || '';
+              row.querySelector('[data-step="cooperative"]')?.remove();
+              const startsProducts = familyReady(brand), allProducts = startsProducts && productReady(answer, true);
+              step(row, 'apparel', startsProducts); step(row, 'apparelOrganized', answer.apparel === 'Sim'); step(row, 'accessories', startsProducts && (answer.apparel === 'Não' || answer.apparelOrganized)); step(row, 'accessoriesOrganized', answer.accessories === 'Sim');
+              step(row, 'mpdv', allProducts); step(row, 'campaign', allProducts && answer.mpdvType === 'Campanha'); step(row, 'campaignState', answer.mpdvType === 'Campanha' && answer.campaign === 'Sim'); step(row, 'institutional', allProducts && answer.mpdvType === 'Institucional'); step(row, 'institutionalState', answer.mpdvType === 'Institucional' && answer.institutional === 'Sim');
+              const materialComplete = answer.mpdvType === 'Não' || (answer.mpdvType && materialReady(answer, answer.mpdvType));
+              step(row, 'observations', allProducts && materialComplete);
+            });
+          }
+          refreshGeneralFlow = function() {
+            const restore = state.brands.map((brand) => [brand, { ...familyAnswer(brand) }, { ...(state.brandAnswers[brand] || {}) }]);
+            if (isFamilyPdv()) state.brands.forEach((brand) => { const family = state.family[brand], answer = state.brandAnswers[brand] || {}; if (family.structure !== 'Sim') Object.assign(family, { planogram: 'Totalmente aderente' }); if (family.planogram === 'Totalmente aderente' && !family.exposure) family.exposure = 'Sim'; answer.footwear = 'Não'; if (answer.mpdvType === 'Não') { answer.campaign = 'Não'; answer.institutional = 'Não'; } if (answer.mpdvType === 'Campanha') answer.institutional = 'Não'; if (answer.mpdvType === 'Institucional') answer.campaign = 'Não'; });
+            previousRefresh();
+            restore.forEach(([brand, family, answer]) => { state.family[brand] = family; state.brandAnswers[brand] = answer; });
+            const cooperative = $('cooperativeAction'), previous = cooperative.value;
+            cooperative.innerHTML = '<option value="">Selecione</option><option value="Não">Não</option>' + state.brands.map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`).join('');
+            cooperative.value = [...cooperative.options].some((option) => option.value === previous) ? previous : '';
+            const relationshipReady = !$('relationshipCard').hidden && Boolean($('teamKnows').value && $('validatedWith').value.trim() && $('salesGuide').value);
+            show('cooperativeActionWrap', relationshipReady);
+            if (!cooperative.value) show('competitionCard', false);
+          };
+          document.addEventListener('change', (event) => {
+            const control = event.target;
+            if (control.matches('select[data-family-mpdv-type]')) { const brand = control.dataset.brand; state.brandAnswers[brand] = { ...(state.brandAnswers[brand] || {}), mpdv: control.value === 'Não' ? 'Não' : control.value ? 'Sim' : '', mpdvType: control.value }; }
+            if (control.matches('input[data-family-brand]') || control.matches('.brand-row select, .brand-row input, .brand-row textarea') || control.matches('input[name="brand"]')) setTimeout(reviseFamily, 0);
+          });
+          firstPendingValidation = function() {
+            if (isFamilyPdv()) for (const brand of state.brands) { const family = familyAnswer(brand), answer = state.brandAnswers[brand] || {}; const needsExposure = ['Não','Parcialmente'].includes(family.structure) || (family.structure === 'Sim' && family.planogram && family.planogram !== 'Totalmente aderente'); if (!family.structure) return validationIssue(`Em ${brand}, responda se a aplicação do planograma é possível.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="structure"]`)); if (family.structure === 'Sim' && !family.planogram) return validationIssue(`Em ${brand}, responda sobre a aderência ao planograma.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="planogram"]`)); if (needsExposure && !family.exposure) return validationIssue(`Em ${brand}, responda sobre a exposição visual.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="exposure"]`)); if (familyNegative(family) && !family.evidenceFile) return validationIssue(`Inclua a imagem de comprovação da exposição de ${brand}.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="evidence"]`)); if (!productReady(answer, true)) return validationIssue(`Complete as perguntas de vestuário, acessórios e organização de ${brand}.`, document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"]`)); if (!answer.mpdvType || !materialReady(answer, answer.mpdvType)) return validationIssue(`Complete a informação do MPDV de ${brand}.`, document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"] [data-key="mpdv"]`)); }
+            const restore = state.brands.map((brand) => [brand, { ...familyAnswer(brand) }, { ...(state.brandAnswers[brand] || {}) }]);
+            if (isFamilyPdv()) state.brands.forEach((brand) => { const family = state.family[brand], answer = state.brandAnswers[brand] || {}; if (family.structure !== 'Sim') Object.assign(family, { planogram: 'Totalmente aderente' }); if (family.planogram === 'Totalmente aderente' && !family.exposure) family.exposure = 'Sim'; answer.footwear = 'Não'; if (answer.mpdvType === 'Não') { answer.campaign = 'Não'; answer.institutional = 'Não'; } if (answer.mpdvType === 'Campanha') answer.institutional = 'Não'; if (answer.mpdvType === 'Institucional') answer.campaign = 'Não'; });
+            const issue = previousValidation();
+            restore.forEach(([brand, family, answer]) => { state.family[brand] = family; state.brandAnswers[brand] = answer; });
+            if (issue) return issue;
+            if (!$('cooperativeAction').value) return validationIssue('Informe se existe ação cooperada na loja e, se houver, selecione a marca.', $('cooperativeAction'));
+            return null;
+          };
+          const previousRender = renderBrandQuestions;
+          renderBrandQuestions = function() { previousRender(); setTimeout(reviseFamily, 0); };
+          document.addEventListener('DOMContentLoaded', () => $('cooperativeAction').addEventListener('change', refreshGeneralFlow));
+        })();
       </script>
 </body>
 </html>
