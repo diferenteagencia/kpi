@@ -359,9 +359,17 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       const unableToValidate = teamKnows === 'Não foi possível validar';
       const salesGuide = $('salesGuide').value;
       const competitor = $('competitor').value;
-      if (competitor !== 'Sim') {
+      const hasCompetitorMpdv = competitor === 'Sim';
+      if (!hasCompetitorMpdv) {
         $('visibilityBrand').value = '';
         $('visibilityBrandOther').value = '';
+        $('bestExecution').value = '';
+        $('bestExecutionOther').value = '';
+        $('mpdvType').value = '';
+        $('campaignFocus').value = '';
+        $('campaignFocusOther').value = '';
+        $('campaignHighlight').value = '';
+        $('mpdvHighlightPhoto').value = '';
       }
       const visibilityBrand = selectedValue('visibilityBrand', 'visibilityBrandOther');
       const salesLeader = selectedValue('salesLeader', 'salesLeaderOther');
@@ -376,13 +384,13 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       show('salesGuideWrap', Boolean(teamKnows && validatedWith));
       show('competitionCard', relationshipComplete);
       show('competitionQuestions', Boolean(competitor));
-      show('visibilityBrandWrap', competitor === 'Sim');
+      show('visibilityBrandWrap', hasCompetitorMpdv);
       show('salesLeaderWrap', Boolean(competitor));
-      show('bestExecutionWrap', Boolean(salesLeader));
-      show('mpdvTypeWrap', Boolean(salesLeader && bestExecution));
-      show('campaignFocusWrap', Boolean(salesLeader && bestExecution && mpdvType));
-      show('campaignHighlightWrap', mpdvType === 'Campanha' && Boolean(campaignFocus));
-      show('mpdvHighlightPhotoWrap', Boolean(campaignFocus) && (mpdvType === 'Institucional' || Boolean(campaignHighlight)));
+      show('bestExecutionWrap', hasCompetitorMpdv && Boolean(salesLeader));
+      show('mpdvTypeWrap', hasCompetitorMpdv && Boolean(salesLeader && bestExecution));
+      show('campaignFocusWrap', hasCompetitorMpdv && Boolean(salesLeader && bestExecution && mpdvType));
+      show('campaignHighlightWrap', hasCompetitorMpdv && mpdvType === 'Campanha' && Boolean(campaignFocus));
+      show('mpdvHighlightPhotoWrap', hasCompetitorMpdv && Boolean(campaignFocus) && (mpdvType === 'Institucional' || Boolean(campaignHighlight)));
       syncOtherField('visibilityBrand', 'visibilityBrandOtherWrap');
       syncOtherField('salesLeader', 'salesLeaderOtherWrap');
       syncOtherField('bestExecution', 'bestExecutionOtherWrap');
@@ -621,7 +629,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
-    function profileReady() { const ready = $('name').value.trim() && $('email').validity.valid && $('company').value; show('locationCard', Boolean(ready)); if (ready) setStep(2); }
+    function profileReady() { const ready = $('name').value.trim() && $('email').validity.valid && $('company').value; show('locationCard', Boolean(ready)); $('state').disabled = !ready; if (ready) setStep(2); }
     
     document.addEventListener('DOMContentLoaded', () => {
       options($('state'), unique(activePdvs.map((row) => row.state)));
@@ -630,7 +638,9 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
       options($('salesLeader'), COMPETITOR_BRANDS);
       options($('bestExecution'), COMPETITOR_BRANDS);
       options($('campaignFocus'), []);
-      ['name','email','company'].forEach((id) => $(id).addEventListener('input', profileReady));
+      ['name','email'].forEach((id) => $(id).addEventListener('input', profileReady));
+      $('company').addEventListener('input', profileReady);
+      $('company').addEventListener('change', profileReady);
       $('state').addEventListener('change', () => { state.pdv = null; refreshLocation(); setPdv(); });
       $('city').addEventListener('input', () => { state.pdv = null; refreshCitySuggestions(); const cityIsValid = activePdvs.some((row) => row.state === $('state').value && row.city === $('city').value); if (cityIsValid) { refreshLocation(); setPdv(); refreshCitySuggestions(); } else { $('pdv').value = ''; populatePdvOptions([], false); setPdv(); } });
       $('city').addEventListener('focus', refreshCitySuggestions);
@@ -694,6 +704,38 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
           const familyReady = (brand) => { const answer = familyAnswer(brand), needsExposure = ['Não', 'Parcialmente'].includes(answer.structure) || (answer.structure === 'Sim' && answer.planogram && answer.planogram !== 'Totalmente aderente'); return answer.structure === 'Sim' && answer.planogram === 'Totalmente aderente' || (needsExposure && answer.exposure && (!familyNegative(answer) || answer.evidenceFile)); };
           const step = (row, name, visible) => { const item = row.querySelector(`[data-step="${name}"]`); if (item) item.hidden = !visible; };
           const familyStep = (row, name, visible) => { const item = row.querySelector(`[data-family-step="${name}"]`); if (item) item.hidden = !visible; };
+          function syncFamilyAnswersFromScreen(row, family, brand) {
+            const answer = state.brandAnswers[brand] || {};
+            const exposure = state.family[brand] || {};
+
+            family.querySelectorAll('input[data-family-key][type="radio"]:checked').forEach((input) => {
+              exposure[input.dataset.familyKey] = input.value;
+            });
+            family.querySelectorAll('textarea[data-family-key]').forEach((input) => {
+              if (input.value.trim()) exposure[input.dataset.familyKey] = input.value;
+            });
+            family.querySelectorAll('input[data-family-key][type="file"]').forEach((input) => {
+              if (input.files?.[0]) exposure[input.dataset.familyKey] = input.files[0].name;
+            });
+            row.querySelectorAll('select[data-key]').forEach((input) => {
+              if (input.value) answer[input.dataset.key] = input.value;
+            });
+            row.querySelectorAll('input[data-key][type="checkbox"]').forEach((input) => {
+              const key = input.dataset.key;
+              answer[key] = [...row.querySelectorAll(`input[data-key="${CSS.escape(key)}"][type="checkbox"]:checked`)].map((item) => item.dataset.value);
+            });
+            row.querySelectorAll('textarea[data-key="observations"]').forEach((input) => {
+              if (input.value.trim()) answer.observations = input.value;
+            });
+            const mpdv = row.querySelector('select[data-key="mpdv"]');
+            if (mpdv?.dataset.familyMpdvType && mpdv.value) {
+              answer.mpdvType = mpdv.value;
+              answer.mpdv = mpdv.value === 'Não' ? 'Não' : 'Sim';
+            }
+            state.family[brand] = exposure;
+            state.brandAnswers[brand] = answer;
+            return { answer, exposure };
+          }
           function reviseFamily() {
             if (!isFamilyPdv()) return;
             $('familyCard').hidden = true;
@@ -701,7 +743,8 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
               const row = document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"]`), family = document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"]`);
               if (!row || !family) return;
               row.insertBefore(family, row.querySelector('.brand-step'));
-              const answer = state.brandAnswers[brand] || {}, exposure = familyAnswer(brand);
+              row.querySelector(':scope > h3')?.remove();
+              const { answer, exposure } = syncFamilyAnswersFromScreen(row, family, brand);
               family.querySelector('[data-family-step="structure"] .question').textContent = `A loja permite a positivação do planograma de ${brand}? Considere a capacidade e a estrutura disponíveis.`;
               familyStep(family, 'planogram', exposure.structure === 'Sim');
               familyStep(family, 'planogramJustification', ['Não aderente','Parcialmente aderente'].includes(exposure.planogram));
@@ -743,6 +786,8 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
             if (control.matches('select[data-family-mpdv-type]')) { const brand = control.dataset.brand; state.brandAnswers[brand] = { ...(state.brandAnswers[brand] || {}), mpdv: control.value === 'Não' ? 'Não' : control.value ? 'Sim' : '', mpdvType: control.value }; }
             if (control.matches('input[data-family-brand]') || control.matches('.brand-row select, .brand-row input, .brand-row textarea') || control.matches('input[name="brand"]')) setTimeout(reviseFamily, 0);
           });
+          window.addEventListener('pageshow', () => setTimeout(reviseFamily, 0));
+          document.addEventListener('DOMContentLoaded', () => setTimeout(reviseFamily, 0));
           firstPendingValidation = function() {
             if (isFamilyPdv()) for (const brand of state.brands) { const family = familyAnswer(brand), answer = state.brandAnswers[brand] || {}; const needsExposure = ['Não','Parcialmente'].includes(family.structure) || (family.structure === 'Sim' && family.planogram && family.planogram !== 'Totalmente aderente'); if (!family.structure) return validationIssue(`Em ${brand}, responda se a aplicação do planograma é possível.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="structure"]`)); if (family.structure === 'Sim' && !family.planogram) return validationIssue(`Em ${brand}, responda sobre a aderência ao planograma.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="planogram"]`)); if (needsExposure && !family.exposure) return validationIssue(`Em ${brand}, responda sobre a exposição visual.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="exposure"]`)); if (familyNegative(family) && !family.evidenceFile) return validationIssue(`Inclua a imagem de comprovação da exposição de ${brand}.`, document.querySelector(`.family-brand-row[data-family-brand="${CSS.escape(brand)}"] [data-family-step="evidence"]`)); if (!productReady(answer, true)) return validationIssue(`Complete as perguntas de vestuário, acessórios e organização de ${brand}.`, document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"]`)); if (!answer.mpdvType || !materialReady(answer, answer.mpdvType)) return validationIssue(`Complete a informação do MPDV de ${brand}.`, document.querySelector(`.brand-row[data-brand="${CSS.escape(brand)}"] [data-key="mpdv"]`)); }
             const restore = state.brands.map((brand) => [brand, { ...familyAnswer(brand) }, { ...(state.brandAnswers[brand] || {}) }]);
@@ -750,7 +795,21 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
             const issue = previousValidation();
             restore.forEach(([brand, family, answer]) => { state.family[brand] = family; state.brandAnswers[brand] = answer; });
             if (issue) return issue;
+            if (!$('teamKnows').value) return validationIssue('responda se o gestor e os vendedores conhecem o promotor.', $('teamKnows'));
+            if (!$('validatedWith').value.trim()) return validationIssue($('teamKnows').value === 'Não foi possível validar' ? 'informe o motivo da não validação.' : 'informe com quem a informação foi validada.', $('validatedWith'));
+            if (!$('salesGuide').value) return validationIssue('responda se a equipe conhece a Cola de Bolso.', $('salesGuide'));
             if (!(state.cooperativeActions || []).length) return validationIssue('Informe se existe ação cooperada na loja e, se houver, selecione a(s) marca(s).', $('cooperativeActionChoices'));
+            if (!$('competitor').value) return validationIssue('responda se existe material de ponto de venda de marcas concorrentes.', $('competitor'));
+            if ($('competitor').value === 'Sim' && !$('visibilityBrand').value) return validationIssue('informe a marca com maior visibilidade no PDV.', $('visibilityBrand'));
+            if ($('competitor').value === 'Sim' && $('visibilityBrand').value === 'Outro' && !$('visibilityBrandOther').value.trim()) return validationIssue('digite a marca com maior visibilidade no PDV.', $('visibilityBrandOther'));
+            if (!$('salesLeader').value) return validationIssue('informe a marca líder de vendas no PDV.', $('salesLeader'));
+            if ($('salesLeader').value === 'Outro' && !$('salesLeaderOther').value.trim()) return validationIssue('digite a marca líder de vendas no PDV.', $('salesLeaderOther'));
+            if ($('competitor').value === 'Sim' && !$('bestExecution').value) return validationIssue('informe a marca com melhor execução visual de MPDV.', $('bestExecution'));
+            if ($('competitor').value === 'Sim' && $('bestExecution').value === 'Outro' && !$('bestExecutionOther').value.trim()) return validationIssue('digite a marca com melhor execução visual de MPDV.', $('bestExecutionOther'));
+            if ($('competitor').value === 'Sim' && !$('mpdvType').value) return validationIssue('informe se o MPDV em destaque é institucional ou de campanha.', $('mpdvType'));
+            if ($('competitor').value === 'Sim' && !$('campaignFocus').value) return validationIssue('informe qual material do MPDV mais se destaca na loja.', $('campaignFocus'));
+            if ($('competitor').value === 'Sim' && $('campaignFocus').value === 'Outro' && !$('campaignFocusOther').value.trim()) return validationIssue('digite o nome do MPDV ou material em destaque.', $('campaignFocusOther'));
+            if ($('competitor').value === 'Sim' && $('mpdvType').value === 'Campanha' && !$('campaignHighlight').value.trim()) return validationIssue('informe qual campanha está em destaque.', $('campaignHighlight'));
             return null;
           };
           const previousRender = renderBrandQuestions;
