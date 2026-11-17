@@ -723,6 +723,7 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
               const materialComplete = answer.mpdvType === 'Não' || (answer.mpdvType && materialReady(answer, answer.mpdvType));
               step(row, 'observations', allProducts && materialComplete);
             });
+            refreshGeneralFlow();
           }
           refreshGeneralFlow = function() {
             const restore = state.brands.map((brand) => [brand, { ...familyAnswer(brand) }, { ...(state.brandAnswers[brand] || {}) }]);
