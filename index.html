@@ -716,7 +716,10 @@ DASHBOARD_LISTS.materialItems = ["Adesivo de vitrine","Bandeja Slat","Banner","C
               row.querySelector('[data-step="cooperative"]')?.remove();
               const startsProducts = familyReady(brand), allProducts = startsProducts && productReady(answer, true);
               step(row, 'apparel', startsProducts); step(row, 'apparelOrganized', answer.apparel === 'Sim'); step(row, 'accessories', startsProducts && (answer.apparel === 'Não' || answer.apparelOrganized)); step(row, 'accessoriesOrganized', answer.accessories === 'Sim');
-              step(row, 'mpdv', allProducts); step(row, 'campaign', allProducts && answer.mpdvType === 'Campanha'); step(row, 'campaignState', answer.mpdvType === 'Campanha' && answer.campaign === 'Sim'); step(row, 'institutional', allProducts && answer.mpdvType === 'Institucional'); step(row, 'institutionalState', answer.mpdvType === 'Institucional' && answer.institutional === 'Sim');
+              if (answer.mpdvType === 'Campanha') { answer.campaign = 'Sim'; answer.institutional = ''; }
+              if (answer.mpdvType === 'Institucional') { answer.institutional = 'Sim'; answer.campaign = ''; }
+              if (answer.mpdvType === 'Não') { answer.campaign = 'Não'; answer.institutional = 'Não'; }
+              step(row, 'mpdv', allProducts); step(row, 'campaign', false); step(row, 'campaignState', answer.mpdvType === 'Campanha'); step(row, 'institutional', false); step(row, 'institutionalState', answer.mpdvType === 'Institucional');
               const materialComplete = answer.mpdvType === 'Não' || (answer.mpdvType && materialReady(answer, answer.mpdvType));
               step(row, 'observations', allProducts && materialComplete);
             });
